@@ -10,30 +10,44 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-model = joblib.load("model.pkl")
+model = joblib.load('model.pkl')
 
-class PropertyInputs(BaseModel):
-    location: str
+class PropertyData(BaseModel):
+    city: str
+    locality: str
     area_sqft: float
     bhk: int
     balcony: str
     property_type: str
     furnished_status: str
     property_age: str
-    amenities_score: float
+    amenities_score: int
 
 @app.post("/predict")
-def predict_valuation(data: PropertyInputs):
+def predict_price(data: PropertyData):
     start_time = time.time()
-    input_df = pd.DataFrame([data.dict()])
-    prediction = model.predict(input_df)[0]
-    latency = round((time.time() - start_time) * 1000, 2)
+    
+    input_data = pd.DataFrame([{
+        'city': data.city,
+        'locality': data.locality,
+        'area_sqft': data.area_sqft,
+        'bhk': data.bhk,
+        'balcony': data.balcony,
+        'property_type': data.property_type,
+        'furnished_status': data.furnished_status,
+        'property_age': data.property_age,
+        'amenities_score': data.amenities_score
+    }])
+    
+    prediction = model.predict(input_data)[0]
+    execution_time = round((time.time() - start_time) * 1000, 2)
     
     return {
-        "predicted_price": round(prediction, 2),
-        "latency_ms": f"{latency} ms"
+        "predicted_price": round(float(prediction), 2),
+        "latency_ms": f"{execution_time} ms"
     }
